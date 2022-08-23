@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 bitcoind-request = "0.1.11"
+bitcoin-node-query = "0.1.2"
+sha256 = "1.0.3"
