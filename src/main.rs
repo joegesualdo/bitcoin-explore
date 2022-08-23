@@ -2,7 +2,7 @@ use std::{env, fmt::LowerHex};
 
 use bitcoin_node_query::get_total_fee_for_block_at_height;
 use bitcoind_request::{
-    command::get_block::{GetBlockCommand, GetBlockCommandVerbosity},
+    command::get_block::{CoinbaseVin, GetBlockCommand, GetBlockCommandVerbosity, NonCoinbaseVin},
     command::{get_block::GetBlockCommandResponse, CallableCommand},
     Blockhash,
 };
@@ -196,6 +196,58 @@ fn main() {
             //println!("prev hash: {:?}", block.previousblockhash);
             // println!("merkleroot: {}", block.merkleroot);
             println!("block header hex: {}", &block_header_hex);
+            println!("---------------------");
+            println!("transactions count: {}", block.tx.len());
+            println!("--------------------------------TRANSACTIONS---------------------------------------------------------");
+            let sub_transactions = &block.tx[1..6];
+            for transaction in sub_transactions {
+                match transaction {
+                    bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Id(id) => {
+                        todo!()
+                    }
+                    bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Raw(transaction) => {
+                        if transaction.is_coinbase_transaction() {
+                            println!("COINBASE TRANSACTION --------------------------------------------------------------------------------");
+                        } else {
+                            println!("TRANSACTION --------------------------------------------------------------------------------");
+                        }
+                        println!("txid: {}", transaction.txid);
+                        println!("block time: {}", block.time);
+                        println!("fees:");
+                        println!("sat/vb: ");
+                        println!("sat/vb: ");
+                        println!("");
+                        for vin in &transaction.vin {
+                            println!("VIN ----------");
+                            match vin {
+                                bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
+                                    println!("Coinbase: true");
+                                    println!("sequence: {}", cb_vin.sequence);
+                                },
+                                bitcoind_request::command::get_block::Vin::NonCoinbase(non_cb_vin) => {
+                                    println!("Coinbase: false");
+                                    println!("from address: ");
+                                    println!("from: from vout {} of transaction {}", non_cb_vin.vout, non_cb_vin.txid);
+                                }
+                            }
+                            println!("--------------");
+                            println!("");
+                        }
+                        for vout in &transaction.vout{
+                            // TODO: don't use unwrap
+                            let address = vout.script_pub_key.address.as_ref().unwrap();
+                            let value = vout.value;
+                            println!("Vout ----------");
+                            println!("address: {}", address);
+                            println!("value (sats): {}", value);
+                            println!("--------------");
+                        }
+                        println!("--------------------------------------------------------------------------------------------");
+
+                    }
+                }
+                println!("");
+            }
             // println!("decoded version hex: {:#?}", decoded_version_hex);
             // println!(
             //     "decoded reversed version hex: {:#?}",
