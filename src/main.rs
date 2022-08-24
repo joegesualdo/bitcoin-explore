@@ -1,19 +1,22 @@
-use std::{env, fmt::LowerHex, io::Read};
+use std::env;
 
 use bitcoin_node_query::get_total_fee_for_block_at_height;
 use bitcoind_request::{
     command::{
-        get_block::{CoinbaseVin, GetBlockCommand, GetBlockCommandVerbosity, NonCoinbaseVin},
-        get_raw_transaction::GetRawTransactionCommand,
-    },
-    command::{
         get_block::{DecodeRawTransactionResponse, GetBlockCommandResponse},
         CallableCommand,
     },
+    command::{
+        get_block::{GetBlockCommand, GetBlockCommandVerbosity},
+        get_raw_transaction::GetRawTransactionCommand,
+    },
     Blockhash,
 };
-use sha256::{digest, digest_bytes};
-struct Error;
+use hex_utilities::{
+    convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
+    get_text_for_hex,
+};
+use sha256::digest_bytes;
 
 fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
     fn op_return_hexs_for_asm(asm: String) -> Option<Vec<String>> {
@@ -47,73 +50,8 @@ fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
         None => None,
     }
 }
-fn convert_hex_utf8(hex: &String) -> Result<String, Error> {
-    let maybe_decoded_hex = decode_hex(&hex.to_string());
-    match maybe_decoded_hex {
-        Ok(decoded_hex) => {
-            let maybe_utf_str = std::str::from_utf8(&decoded_hex);
-            match maybe_utf_str {
-                Ok(utf_str) => Ok(utf_str.to_string()),
-                Err(error) => Err(Error),
-            }
-        }
-        Err(error) => Err(Error),
-    }
-}
 
-fn convert_hex_to_ascii(hex: &String) -> Result<String, Error> {
-    enum Error {
-        Int(ParseIntError),
-        Unicode(u32),
-    }
-    fn hex_to_char(s: &str) -> Result<char, Error> {
-        // u8::from_str_radix(s, 16).map(|n| n as char)
-        // u8::from_str_radix(s, 16).map(|n| n as char)
-        let unicode = u32::from_str_radix(s, 16).map_err(Error::Int)?;
-        char::from_u32(unicode).ok_or_else(|| Error::Unicode(unicode))
-    }
-
-    let maybe_decoded_hex = decode_hex(&hex.to_string());
-    match maybe_decoded_hex {
-        Ok(decoded_hex) => {
-            let mut new_string: String = String::new();
-            for maybe_byte in decoded_hex.bytes() {
-                match maybe_byte {
-                    Ok(byte) => {
-                        let hex = format!("{:02X}", byte);
-                        let maybe_char = hex_to_char(&hex);
-                        match maybe_char {
-                            Ok(char) => {
-                                new_string.push(char);
-                            }
-                            Err(_) => return Err(Error),
-                        }
-                    }
-                    Err(_) => return Err(Error),
-                }
-            }
-            Ok(new_string)
-        }
-        Err(error) => Err(Error),
-    }
-}
-
-// Should work like this: http://www.unit-conversion.info/texttools/hexadecimal/
-fn get_text_for_hex(hex: &String) -> Result<String, Error> {
-    let maybe_hex_utf8 = convert_hex_utf8(&hex);
-    match maybe_hex_utf8 {
-        Ok(hex_utf8) => Ok(hex_utf8),
-        Err(error) => {
-            let maybe_hex_ascii = convert_hex_to_ascii(&hex);
-            match maybe_hex_ascii {
-                Ok(hex_ascii) => Ok(hex_ascii),
-                Err(error) => Err(Error),
-            }
-        }
-    }
-}
-
-fn get_text_for_op_return_hex(hex: &String) -> Result<String, Error> {
+fn get_text_for_op_return_hex(hex: &String) -> Result<String, hex_utilities::Error> {
     get_text_for_hex(hex)
 }
 fn strip_chars_that_take_up_extra_space(s: String) -> String {
@@ -121,63 +59,15 @@ fn strip_chars_that_take_up_extra_space(s: String) -> String {
         .replace("/t", "")
         .replace(|c: char| c == '\u{b}', "")
 }
-fn get_text_for_coinbase_sequence(hex: &String) -> Result<String, Error> {
+fn get_text_for_coinbase_sequence(hex: &String) -> Result<String, hex_utilities::Error> {
     get_text_for_hex(hex)
 }
 
-fn convert_decimal_to_hexadecimal(
-    decimal_num: u64,
-    include_prefix: bool,
-    bytes: Option<u8>,
-) -> String {
-    let hex_string_without_prefix = match bytes {
-        // two characters per byte
-        Some(bytes) => match bytes {
-            1 => format!("{:02x}", decimal_num),
-            2 => format!("{:04x}", decimal_num),
-            3 => format!("{:06x}", decimal_num),
-            4 => format!("{:08x}", decimal_num),
-            _ => panic!("bytes for hex not supported: {}", bytes),
-        },
-        None => format!("{:x}", decimal_num),
-    };
-    if include_prefix {
-        format!("0x{hex_string_without_prefix}")
-    } else {
-        hex_string_without_prefix
-    }
-}
 fn prefix_string(s: &str, prefix: &str) -> String {
     format!("{}{}", prefix, s)
 }
 fn add_hex_prefix(s: &String) -> String {
     prefix_string(s, "0x")
-}
-
-use std::{fmt::Write, num::ParseIntError};
-
-pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
-    (0..s.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
-        .collect()
-}
-
-pub fn encode_hex(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        // We want to print the leading zero in each byte array item, so we need 02x formatting
-        // here. So "0d" won't be printed as "d"
-        write!(&mut s, "{:02x}", b).unwrap();
-    }
-    s
-}
-
-fn convert_big_endian_hex_to_little_endian(hex: &String) -> String {
-    let decoded_hex = decode_hex(&hex).unwrap();
-    let reversed_decoded_hex: Vec<u8> = decoded_hex.into_iter().rev().collect();
-    let reversed_encoded_hex = encode_hex(&reversed_decoded_hex);
-    reversed_encoded_hex
 }
 
 // The version for a block, from the bitcoin network, can be given as 1, 2, 0x00000002, 0x20000000, or in different values. If the version is given as decimal values like 1 or 2 it needs to be converted into a padded hexadecimal value first (0x00000002). If it is given as hex-value like this 0x20000000, it can be used as input value right away (it still needs to be converted to little-endian thought).
@@ -250,19 +140,17 @@ fn print_transaction_for_block(
     println!("fees:");
     println!("sat/vb: ");
     println!("sat/vb: ");
-    println!("..........vins..................................................");
+    println!("---------- vins --------------------------------------------------");
     for vin in &transaction.vin {
         match vin {
             bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
-                println!("vin: {:#?}", cb_vin);
-                println!("Coinbase (New Coins)");
-                println!("sequence: {}", cb_vin.sequence);
+                println!("✨ Coinbase (New Coins)");
                 let coinbase = &cb_vin.coinbase;
                 let maybe_text_for_coinbase_sequence = get_text_for_coinbase_sequence(coinbase);
                 match maybe_text_for_coinbase_sequence {
                     Ok(text_for_coinbase) => {
                         println!(
-                            "COINBASE MESSAGE: {}",
+                            "{}",
                             strip_chars_that_take_up_extra_space(text_for_coinbase)
                         );
                     }
@@ -276,7 +164,7 @@ fn print_transaction_for_block(
                     .call(&bitcoind_request_client);
                 let vout_num = non_cb_vin.vout;
                 let (address, value) = match get_raw_transaction_command_response {
-                                            bitcoind_request::command::get_raw_transaction::GetRawTransactionCommandResponse::SerializedHexEncodedData(hex) => {todo!()},
+                                            bitcoind_request::command::get_raw_transaction::GetRawTransactionCommandResponse::SerializedHexEncodedData(_hex) => {todo!()},
                                             bitcoind_request::command::get_raw_transaction::GetRawTransactionCommandResponse::Transaction(transaction) => {
                                                 let mut address: Option<String> = None;
                                                 let mut value: Option<f64> = None;
@@ -294,7 +182,10 @@ fn print_transaction_for_block(
                 match maybe_opt_returns {
                     Some(opt_returns) => {
                         for opt_return in opt_returns {
-                            println!("OP_RETURN: {}", opt_return);
+                            println!(
+                                "OP_RETURN: {}",
+                                strip_chars_that_take_up_extra_space(opt_return)
+                            );
                         }
                     }
                     None => {}
@@ -307,7 +198,7 @@ fn print_transaction_for_block(
             }
         }
     }
-    println!("..........vouts..................................................");
+    println!("---------- vouts --------------------------------------------------");
     for vout in &transaction.vout {
         // TODO: don't use unwrap
         // println!("Vout: {:#?}", vout);
@@ -317,7 +208,10 @@ fn print_transaction_for_block(
         match maybe_opt_returns {
             Some(opt_returns) => {
                 for opt_return in opt_returns {
-                    println!("OP_RETURN: {}", opt_return);
+                    println!(
+                        "OP_RETURN: {}",
+                        strip_chars_that_take_up_extra_space(opt_return)
+                    );
                 }
             }
             None => {}
@@ -361,10 +255,6 @@ fn main() {
             let bits_hex_formatted = add_hex_prefix(&block.bits);
             let nonce_hex_formatted = convert_decimal_to_hexadecimal(block.nonce, true, None);
 
-            let version_hex_string = convert_decimal_to_hexadecimal(block.version, false, None);
-            let decoded_version_hex = decode_hex(&version_hex_string).unwrap();
-            let reversed_decoded_version_hex: Vec<u8> =
-                decoded_version_hex.into_iter().rev().collect();
             let prev_blockhash = block.previousblockhash.unwrap();
 
             let block_header_hex = construct_block_header_hex(
@@ -375,18 +265,13 @@ fn main() {
                 &block.bits,
                 block.nonce,
             );
-            // let concatentated_le_hexes = construct_block_header(
-            //     // &convert_decimal_to_hexadecimal(20000000, false, Some(4)),
-            //     &"20000000".to_string(),
-            //     &"00000000000000000003ecd827f336c6971f6f77a0b9fba362398dd867975645".to_string(),
-            //     &"66b7c4a1926b41ceb2e617ddae0067e7bfea42db502017fde5b695a50384ed26".to_string(),
-            //     &convert_decimal_to_hexadecimal(1571443461, false, None),
-            //     &"1715a35c".to_string(),
-            //     &"3f93ada7".to_string(),
-            // );
 
-            let block_hash = get_block_hash_from_block_header_hex(&block_header_hex);
-
+            println!("");
+            println!("");
+            println!(
+                "***************************** BLOCK: {} **********************************",
+                block.height
+            );
             println!("height: {}", block.height);
             println!("hash: {}", block.hash);
             println!("prev hash: {:?}", &prev_blockhash);
@@ -448,17 +333,7 @@ fn main() {
             for transaction in &transactions_not_including_coinbase[0..5] {
                 print_transaction_for_block(&transaction, block.time, &bitcoind_request_client);
             }
-            // println!("decoded version hex: {:#?}", decoded_version_hex);
-            // println!(
-            //     "decoded reversed version hex: {:#?}",
-            //     reversed_encoded_version_hex
-            // );
-            // println!("median fee: {}", block.tx[0].);
         }
-        GetBlockCommandResponse::BlockHash(hash) => panic!("not supported"),
+        GetBlockCommandResponse::BlockHash(_hash) => panic!("not supported"),
     }
-    let martini_emoji = '\u{909f}';
-    println!("{}", martini_emoji);
-    let text = "🐟";
-    println!("{:#?}", text);
 }
