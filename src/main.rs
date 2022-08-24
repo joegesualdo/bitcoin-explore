@@ -48,8 +48,6 @@ fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
     }
 }
 fn convert_hex_utf8(hex: &String) -> Result<String, Error> {
-    // TODO: ERROR CATCHING
-
     let maybe_decoded_hex = decode_hex(&hex.to_string());
     match maybe_decoded_hex {
         Ok(decoded_hex) => {
@@ -99,8 +97,8 @@ fn convert_hex_to_ascii(hex: &String) -> Result<String, Error> {
         Err(error) => Err(Error),
     }
 }
-// let hex = "636861726c6579206c6f766573206865696469".to_string();
-//
+
+// Should work like this: http://www.unit-conversion.info/texttools/hexadecimal/
 fn get_text_for_hex(hex: &String) -> Result<String, Error> {
     let maybe_hex_utf8 = convert_hex_utf8(&hex);
     match maybe_hex_utf8 {
@@ -256,6 +254,7 @@ fn print_transaction_for_block(
     for vin in &transaction.vin {
         match vin {
             bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
+                println!("vin: {:#?}", cb_vin);
                 println!("Coinbase (New Coins)");
                 println!("sequence: {}", cb_vin.sequence);
                 let coinbase = &cb_vin.coinbase;
