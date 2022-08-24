@@ -1,5 +1,3 @@
-use std::env;
-
 use bitcoin_node_query::get_total_fee_for_block_at_height;
 use bitcoind_request::{
     command::{
@@ -16,6 +14,8 @@ use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     get_text_for_hex,
 };
+use std::env;
+
 use sha256::digest_bytes;
 
 fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
