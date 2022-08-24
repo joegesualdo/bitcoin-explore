@@ -1,12 +1,126 @@
-use std::{env, fmt::LowerHex};
+use std::{env, fmt::LowerHex, io::Read};
 
 use bitcoin_node_query::get_total_fee_for_block_at_height;
 use bitcoind_request::{
-    command::get_block::{CoinbaseVin, GetBlockCommand, GetBlockCommandVerbosity, NonCoinbaseVin},
-    command::{get_block::GetBlockCommandResponse, CallableCommand},
+    command::{
+        get_block::{CoinbaseVin, GetBlockCommand, GetBlockCommandVerbosity, NonCoinbaseVin},
+        get_raw_transaction::GetRawTransactionCommand,
+    },
+    command::{
+        get_block::{DecodeRawTransactionResponse, GetBlockCommandResponse},
+        CallableCommand,
+    },
     Blockhash,
 };
 use sha256::{digest, digest_bytes};
+struct Error;
+
+fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
+    fn op_return_hexs_for_asm(asm: String) -> Option<Vec<String>> {
+        let splits: Vec<String> = asm.split_whitespace().map(String::from).collect();
+        let maybe_first = splits.first();
+        let is_first_op_return = match maybe_first {
+            Some(first) => first == &"OP_RETURN",
+            None => false,
+        };
+        if is_first_op_return {
+            let rest: Vec<String> = splits[0..].into_iter().map(String::from).collect();
+            Some(rest)
+        } else {
+            None
+        }
+    }
+
+    let maybe_op_return_hexes = op_return_hexs_for_asm(asm.to_string());
+    match maybe_op_return_hexes {
+        Some(op_return_hexes) => {
+            let mut op_return_texts = vec![];
+            for op_return_hex in op_return_hexes {
+                let maybe_op_return_text = get_text_for_op_return_hex(&op_return_hex);
+                match maybe_op_return_text {
+                    Ok(op_return_text) => op_return_texts.push(op_return_text),
+                    Err(_) => {}
+                }
+            }
+            Some(op_return_texts)
+        }
+        None => None,
+    }
+}
+fn convert_hex_utf8(hex: &String) -> Result<String, Error> {
+    // TODO: ERROR CATCHING
+
+    let maybe_decoded_hex = decode_hex(&hex.to_string());
+    match maybe_decoded_hex {
+        Ok(decoded_hex) => {
+            let maybe_utf_str = std::str::from_utf8(&decoded_hex);
+            match maybe_utf_str {
+                Ok(utf_str) => Ok(utf_str.to_string()),
+                Err(error) => Err(Error),
+            }
+        }
+        Err(error) => Err(Error),
+    }
+}
+
+fn convert_hex_to_ascii(hex: &String) -> Result<String, Error> {
+    enum Error {
+        Int(ParseIntError),
+        Unicode(u32),
+    }
+    fn hex_to_char(s: &str) -> Result<char, Error> {
+        // u8::from_str_radix(s, 16).map(|n| n as char)
+        // u8::from_str_radix(s, 16).map(|n| n as char)
+        let unicode = u32::from_str_radix(s, 16).map_err(Error::Int)?;
+        char::from_u32(unicode).ok_or_else(|| Error::Unicode(unicode))
+    }
+
+    let maybe_decoded_hex = decode_hex(&hex.to_string());
+    match maybe_decoded_hex {
+        Ok(decoded_hex) => {
+            let mut new_string: String = String::new();
+            for maybe_byte in decoded_hex.bytes() {
+                match maybe_byte {
+                    Ok(byte) => {
+                        let hex = format!("{:02X}", byte);
+                        let maybe_char = hex_to_char(&hex);
+                        match maybe_char {
+                            Ok(char) => {
+                                new_string.push(char);
+                            }
+                            Err(_) => return Err(Error),
+                        }
+                    }
+                    Err(_) => return Err(Error),
+                }
+            }
+            Ok(new_string)
+        }
+        Err(error) => Err(Error),
+    }
+}
+// let hex = "636861726c6579206c6f766573206865696469".to_string();
+//
+fn get_text_for_hex(hex: &String) -> Result<String, Error> {
+    let maybe_hex_utf8 = convert_hex_utf8(&hex);
+    match maybe_hex_utf8 {
+        Ok(hex_utf8) => Ok(hex_utf8),
+        Err(error) => {
+            let maybe_hex_ascii = convert_hex_to_ascii(&hex);
+            match maybe_hex_ascii {
+                Ok(hex_ascii) => Ok(hex_ascii),
+                Err(error) => Err(Error),
+            }
+        }
+    }
+}
+
+fn get_text_for_op_return_hex(hex: &String) -> Result<String, Error> {
+    get_text_for_hex(hex)
+}
+fn get_text_for_coinbase_sequence(hex: &String) -> Result<String, Error> {
+    get_text_for_hex(hex)
+}
 
 fn convert_decimal_to_hexadecimal(
     decimal_num: u64,
@@ -121,6 +235,96 @@ pub fn construct_block_header_hex(
     );
     concatentated_le_hexes
 }
+fn print_transaction_for_block(
+    transaction: &DecodeRawTransactionResponse,
+    block_time: u64,
+    bitcoind_request_client: &bitcoind_request::client::Client,
+) {
+    println!("txid: {}", transaction.txid);
+    println!("block time: {}", block_time);
+    println!("fees:");
+    println!("sat/vb: ");
+    println!("sat/vb: ");
+    println!("");
+    for vin in &transaction.vin {
+        println!("VIN ----------");
+        match vin {
+            bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
+                println!("Coinbase (New Coins)");
+                println!("sequence: {}", cb_vin.sequence);
+                let coinbase = &cb_vin.coinbase;
+                let maybe_text_for_coinbase_sequence = get_text_for_coinbase_sequence(coinbase);
+                match maybe_text_for_coinbase_sequence {
+                    Ok(text_for_coinbase) => {
+                        println!("COINBASE MESSAGE: {}", text_for_coinbase);
+                    }
+                    Err(_) => {}
+                }
+            }
+            bitcoind_request::command::get_block::Vin::NonCoinbase(non_cb_vin) => {
+                let txid = non_cb_vin.txid.clone();
+                let get_raw_transaction_command_response = GetRawTransactionCommand::new(txid)
+                    .verbose(true)
+                    .call(&bitcoind_request_client);
+                let vout_num = non_cb_vin.vout;
+                let (address, value) = match get_raw_transaction_command_response {
+                                            bitcoind_request::command::get_raw_transaction::GetRawTransactionCommandResponse::SerializedHexEncodedData(hex) => {todo!()},
+                                            bitcoind_request::command::get_raw_transaction::GetRawTransactionCommandResponse::Transaction(transaction) => {
+                                                let mut address: Option<String> = None;
+                                                let mut value: Option<f64> = None;
+                                                for vout in transaction.vout {
+                                                    if vout.n == vout_num {
+                                                        address = vout.script_pub_key.address;
+                                                        value = Some(vout.value)
+                                                    }
+                                                }
+                                                (address, value)
+                                            },
+                                        };
+                let asm = &non_cb_vin.script_sig.asm;
+                let maybe_opt_returns = get_op_returns_texts_for_asm(asm.to_string());
+                match maybe_opt_returns {
+                    Some(opt_returns) => {
+                        for opt_return in opt_returns {
+                            println!("OP_RETURN: {}", opt_return);
+                        }
+                    }
+                    None => {}
+                }
+                println!("from address: {}", address.unwrap_or("N/A".to_string()));
+                println!("value: {}", value.unwrap());
+
+                println!(
+                    "from: from vout {} of transaction {}",
+                    non_cb_vin.vout, non_cb_vin.txid
+                );
+            }
+        }
+        println!("--------------");
+        println!("");
+    }
+    for vout in &transaction.vout {
+        // TODO: don't use unwrap
+        // println!("Vout: {:#?}", vout);
+        let maybe_address = vout.script_pub_key.address.as_ref();
+        let asm = &vout.script_pub_key.asm;
+        let maybe_opt_returns = get_op_returns_texts_for_asm(asm.to_string());
+        match maybe_opt_returns {
+            Some(opt_returns) => {
+                for opt_return in opt_returns {
+                    println!("OP_RETURN: {}", opt_return);
+                }
+            }
+            None => {}
+        }
+        let value = vout.value;
+        println!("Vout ----------");
+        println!("address: {}", maybe_address.unwrap_or(&"N/A".to_string()));
+        println!("value (sats): {}", value);
+        println!("--------------");
+    }
+    println!("--------------------------------------------------------------------------------------------");
+}
 
 fn main() {
     let password = env::var("BITCOIND_PASSWORD").expect("BITCOIND_PASSWORD env variable not set");
@@ -131,7 +335,7 @@ fn main() {
     let bitcoin_node_query_client = bitcoin_node_query::Client::new(&url, &username, &password)
         .expect("failed to create client");
     let get_block_command_response = GetBlockCommand::new(Blockhash(
-        "0000000000000000000811d22829991146f1653a0c2d250e3b5999e7aa38eccd".to_string(),
+        "00000000000000000008fc4136a664f78ac1a648a6c28ef1733dd07c88cbd0ae".to_string(),
     ))
     .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation)
     .call(&bitcoind_request_client);
@@ -199,55 +403,42 @@ fn main() {
             println!("---------------------");
             println!("transactions count: {}", block.tx.len());
             println!("--------------------------------TRANSACTIONS---------------------------------------------------------");
-            let sub_transactions = &block.tx[1..6];
-            for transaction in sub_transactions {
+            // let sub_transactions = &block.tx[1..6];
+            // let transactions = sub_transactions
+            let transactions = block.tx;
+            let mut transactions_not_including_coinbase: Vec<DecodeRawTransactionResponse> = vec![];
+            let mut coinbase_transaction: Option<DecodeRawTransactionResponse> = None;
+            for transaction in transactions {
                 match transaction {
                     bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Id(id) => {
                         todo!()
                     }
                     bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Raw(transaction) => {
                         if transaction.is_coinbase_transaction() {
-                            println!("COINBASE TRANSACTION --------------------------------------------------------------------------------");
+                            coinbase_transaction = Some(transaction);
                         } else {
-                            println!("TRANSACTION --------------------------------------------------------------------------------");
+                            transactions_not_including_coinbase.push(transaction);
                         }
-                        println!("txid: {}", transaction.txid);
-                        println!("block time: {}", block.time);
-                        println!("fees:");
-                        println!("sat/vb: ");
-                        println!("sat/vb: ");
-                        println!("");
-                        for vin in &transaction.vin {
-                            println!("VIN ----------");
-                            match vin {
-                                bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
-                                    println!("Coinbase: true");
-                                    println!("sequence: {}", cb_vin.sequence);
-                                },
-                                bitcoind_request::command::get_block::Vin::NonCoinbase(non_cb_vin) => {
-                                    println!("Coinbase: false");
-                                    println!("from address: ");
-                                    println!("from: from vout {} of transaction {}", non_cb_vin.vout, non_cb_vin.txid);
-                                }
-                            }
-                            println!("--------------");
-                            println!("");
-                        }
-                        for vout in &transaction.vout{
-                            // TODO: don't use unwrap
-                            let address = vout.script_pub_key.address.as_ref().unwrap();
-                            let value = vout.value;
-                            println!("Vout ----------");
-                            println!("address: {}", address);
-                            println!("value (sats): {}", value);
-                            println!("--------------");
-                        }
-                        println!("--------------------------------------------------------------------------------------------");
 
                     }
                 }
-                println!("");
             }
+            // println!("coinbase: {:?}", &coinbase_transaction.unwrap());
+            match coinbase_transaction {
+                Some(cb_transaction) => {
+                    print_transaction_for_block(
+                        &cb_transaction,
+                        block.time,
+                        &bitcoind_request_client,
+                    );
+                }
+                None => {
+                    todo!()
+                }
+            }
+            //  for transaction in transactions_not_including_coinbase {
+            //      print_transaction_for_block(&transaction, block.time, &bitcoind_request_client);
+            //  }
             // println!("decoded version hex: {:#?}", decoded_version_hex);
             // println!(
             //     "decoded reversed version hex: {:#?}",
@@ -257,4 +448,8 @@ fn main() {
         }
         GetBlockCommandResponse::BlockHash(hash) => panic!("not supported"),
     }
+    let martini_emoji = '\u{909f}';
+    println!("{}", martini_emoji);
+    let text = "🐟";
+    println!("{:#?}", text);
 }
