@@ -118,6 +118,11 @@ fn get_text_for_hex(hex: &String) -> Result<String, Error> {
 fn get_text_for_op_return_hex(hex: &String) -> Result<String, Error> {
     get_text_for_hex(hex)
 }
+fn strip_chars_that_take_up_extra_space(s: String) -> String {
+    s.replace("\n", "")
+        .replace("/t", "")
+        .replace(|c: char| c == '\u{b}', "")
+}
 fn get_text_for_coinbase_sequence(hex: &String) -> Result<String, Error> {
     get_text_for_hex(hex)
 }
@@ -240,14 +245,15 @@ fn print_transaction_for_block(
     block_time: u64,
     bitcoind_request_client: &bitcoind_request::client::Client,
 ) {
+    println!("");
+    println!("====== TRANSACTION ============================================");
     println!("txid: {}", transaction.txid);
     println!("block time: {}", block_time);
     println!("fees:");
     println!("sat/vb: ");
     println!("sat/vb: ");
-    println!("");
+    println!("..........vins..................................................");
     for vin in &transaction.vin {
-        println!("VIN ----------");
         match vin {
             bitcoind_request::command::get_block::Vin::Coinbase(cb_vin) => {
                 println!("Coinbase (New Coins)");
@@ -256,7 +262,10 @@ fn print_transaction_for_block(
                 let maybe_text_for_coinbase_sequence = get_text_for_coinbase_sequence(coinbase);
                 match maybe_text_for_coinbase_sequence {
                     Ok(text_for_coinbase) => {
-                        println!("COINBASE MESSAGE: {}", text_for_coinbase);
+                        println!(
+                            "COINBASE MESSAGE: {}",
+                            strip_chars_that_take_up_extra_space(text_for_coinbase)
+                        );
                     }
                     Err(_) => {}
                 }
@@ -291,18 +300,15 @@ fn print_transaction_for_block(
                     }
                     None => {}
                 }
-                println!("from address: {}", address.unwrap_or("N/A".to_string()));
-                println!("value: {}", value.unwrap());
-
                 println!(
-                    "from: from vout {} of transaction {}",
-                    non_cb_vin.vout, non_cb_vin.txid
+                    "📥 {}  {} BTC",
+                    address.unwrap_or("N/A".to_string()),
+                    value.unwrap()
                 );
             }
         }
-        println!("--------------");
-        println!("");
     }
+    println!("..........vouts..................................................");
     for vout in &transaction.vout {
         // TODO: don't use unwrap
         // println!("Vout: {:#?}", vout);
@@ -318,12 +324,14 @@ fn print_transaction_for_block(
             None => {}
         }
         let value = vout.value;
-        println!("Vout ----------");
-        println!("address: {}", maybe_address.unwrap_or(&"N/A".to_string()));
-        println!("value (sats): {}", value);
-        println!("--------------");
+        println!(
+            "📤 {}    {}",
+            maybe_address.unwrap_or(&"N/A".to_string()),
+            value
+        );
     }
-    println!("--------------------------------------------------------------------------------------------");
+    println!("===============================================================");
+    println!("");
 }
 
 fn main() {
@@ -406,6 +414,8 @@ fn main() {
             // let sub_transactions = &block.tx[1..6];
             // let transactions = sub_transactions
             let transactions = block.tx;
+            // TODO: VERY Inefficient. We're looping over all the transactions twice, when we
+            // should only be doing it once.
             let mut transactions_not_including_coinbase: Vec<DecodeRawTransactionResponse> = vec![];
             let mut coinbase_transaction: Option<DecodeRawTransactionResponse> = None;
             for transaction in transactions {
@@ -436,9 +446,9 @@ fn main() {
                     todo!()
                 }
             }
-            //  for transaction in transactions_not_including_coinbase {
-            //      print_transaction_for_block(&transaction, block.time, &bitcoind_request_client);
-            //  }
+            for transaction in &transactions_not_including_coinbase[0..5] {
+                print_transaction_for_block(&transaction, block.time, &bitcoind_request_client);
+            }
             // println!("decoded version hex: {:#?}", decoded_version_hex);
             // println!(
             //     "decoded reversed version hex: {:#?}",
