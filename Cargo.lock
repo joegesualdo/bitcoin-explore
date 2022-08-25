@@ -132,31 +132,46 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bitcoin-address"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "211f2c651a0c694ee13269bece409646adb87a7de97cbf2a190822ee982a8487"
+
+[[package]]
 name = "bitcoin-explore"
 version = "0.1.0"
 dependencies = [
  "bitcoin-node-query",
  "bitcoind-request",
+ "chrono",
  "hex-utilities",
  "sha256",
 ]
 
 [[package]]
 name = "bitcoin-node-query"
-version = "0.1.2"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c79db36a9d0c63d01bd851169dffbb449025185c9eb12ce169c33eaeccf8f9de"
+checksum = "2e2aa54ccb71d8c4eb46c4403dc6e377dd9646aead217800a3239ea9542d096b"
 dependencies = [
+ "bitcoin-address",
+ "bitcoin-transaction-utils",
  "bitcoind-request",
  "chrono",
  "jsonrpc",
 ]
 
 [[package]]
-name = "bitcoind-request"
-version = "0.1.11"
+name = "bitcoin-transaction-utils"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9f22d0d35f62a54767a59c15b7c790415a1eadb8cbfdd4cfe3b6b6f750fbab8"
+checksum = "d4da5e30bc4e1d6e8ff660379aa565dcfad0879a971aa4ca8d45b101e042b4c3"
+
+[[package]]
+name = "bitcoind-request"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af20fa38de0ab9525f73088f3a14729d2782fb0829f599cadd8807c21e835d98"
 dependencies = [
  "async-std",
  "chrono",
@@ -370,9 +385,9 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-utilities"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8184fb792a27a8bd145eb3b3dee7048753b5b7a79d579f70b5c75610fedb0f94"
+checksum = "1dabc868945a69c22d5ddcdd01cea5238d667767b709270628319981b6569a63"
 
 [[package]]
 name = "iana-time-zone"
