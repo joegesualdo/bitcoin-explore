@@ -240,7 +240,6 @@ pub fn construct_block_header_hex(
     let timestamp_hex_le = convert_big_endian_hex_to_little_endian(&timestamp_hex);
 
     let bits_hex_le = convert_big_endian_hex_to_little_endian(bits_hex);
-    print!("NONCE!: {:#?}", nonce_hex);
     let nonce_hex_le = convert_big_endian_hex_to_little_endian(&nonce_hex);
 
     let concatentated_le_hexes = format!(
@@ -556,7 +555,7 @@ fn main() {
         }
         None => {
             let get_raw_transaction_command_response_result = GetRawTransactionCommand::new(
-                "5ea35103fba386dec1027e176a14f8c9004d0410f5dfc3c485148332aee01375".to_string(),
+                first_arg.to_string(),
             )
             .verbose(true)
             .call(&bitcoind_request_client);
