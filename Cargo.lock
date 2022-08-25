@@ -139,7 +139,7 @@ checksum = "211f2c651a0c694ee13269bece409646adb87a7de97cbf2a190822ee982a8487"
 
 [[package]]
 name = "bitcoin-explore"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitcoin-node-query",
  "bitcoind-request",
@@ -385,9 +385,9 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-utilities"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dabc868945a69c22d5ddcdd01cea5238d667767b709270628319981b6569a63"
+checksum = "5997fe99f2e2bbc1d05b0e0b415160a1ab89b192d6a4d7751377d0d6ecba69be"
 
 [[package]]
 name = "iana-time-zone"

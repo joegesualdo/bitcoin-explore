@@ -240,6 +240,7 @@ pub fn construct_block_header_hex(
     let timestamp_hex_le = convert_big_endian_hex_to_little_endian(&timestamp_hex);
 
     let bits_hex_le = convert_big_endian_hex_to_little_endian(bits_hex);
+    print!("NONCE!: {:#?}", nonce_hex);
     let nonce_hex_le = convert_big_endian_hex_to_little_endian(&nonce_hex);
 
     let concatentated_le_hexes = format!(
