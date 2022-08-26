@@ -3,9 +3,9 @@
 # Bitcoin Explore
 > Explore the Bitcoin Blockchain in the Terminal
 
-![Screenshot](screenshot.png)
-
 Get information about a block or transaction, quickly and easily right from your terminal.
+
+![Screenshot](screenshot.png)
 
 ## Install
 > Add package to Cargo.toml file
