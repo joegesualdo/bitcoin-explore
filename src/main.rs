@@ -18,6 +18,7 @@ use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     get_text_for_hex,
 };
+use unicode_segmentation::UnicodeSegmentation;
 use std::env;
 
 use sha256::digest_bytes;
@@ -33,10 +34,31 @@ fn pad_right(s: &str, pad: u64, padder: Option<&str>) -> String {
     }
 }
 
+fn truncate(s: &str, max_chars: usize, with_elipsis: bool) -> String {
+    // TODO: This doesn't work as expected if the string has emojis
+    //       try counting graphememes
+    let elispsis = if with_elipsis {"..."} else {""};
+    let elispsis_len = elispsis.len();
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => format!("{}{}",&s[..(idx-elispsis_len)], elispsis),
+    }
+}
+
+
 fn pad_right_to_width(s: &str, width: u64, padder: Option<&str>) -> String {
+    let graphemes = s.graphemes(true).collect::<Vec<&str>>();
+    let graphmeme_length = graphemes.len() as usize;
+    let truncated_s = if graphmeme_length > width as usize{
+        truncate(s, width as usize, true)
+    } else {
+        s.to_string()
+    };
+    let graphemes_truncated = truncated_s.graphemes(true).collect::<Vec<&str>>();
+    let graphmeme_truncated_length = graphemes_truncated.len() as usize;
     match padder {
         Some(padder) => {
-            let pad = width - (s.len() as u64);
+            let pad = width - graphmeme_truncated_length as u64;
             pad_right(s, pad, Some(padder))
         }
         // This is much more performant as it doesn't allocated a new string

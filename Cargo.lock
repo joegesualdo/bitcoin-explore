@@ -139,13 +139,14 @@ checksum = "211f2c651a0c694ee13269bece409646adb87a7de97cbf2a190822ee982a8487"
 
 [[package]]
 name = "bitcoin-explore"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "bitcoin-node-query",
  "bitcoind-request",
  "chrono",
  "hex-utilities",
  "sha256",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -671,6 +672,12 @@ name = "unicode-ident"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4f5b37a154999a8f3f98cc23a628d850e154479cd94decf3414696e12e31aaf"
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e8820f5d777f6224dc4be3632222971ac30164d4a258d595640799554ebfd99"
 
 [[package]]
 name = "value-bag"
