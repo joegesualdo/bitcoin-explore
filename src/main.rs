@@ -544,24 +544,9 @@ fn main() {
     // let get_block_command_response = GetBlockCommand::new(Blockhash(
     //     "00000000000000000008fc4136a664f78ac1a648a6c28ef1733dd07c88cbd0ae".to_string(),
     // ));
-    match maybe_block_hash {
-        Some(block_hash) => {
-            let get_block_command_response =
-                GetBlockCommand::new(Blockhash(block_hash.to_string()))
-                    .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation)
-                    .call(&bitcoind_request_client)
-                    .unwrap();
-            match get_block_command_response {
-                GetBlockCommandResponse::Block(block) => {
-                    print_block(block, bitcoin_node_query_client, bitcoind_request_client)
-                }
-                GetBlockCommandResponse::BlockHash(_hash) => panic!("not supported"),
-            }
-        }
-        None => {
-                    print!("444");
+    fn perform_for_transaction(transaction_hash: String, bitcoind_request_client: bitcoind_request::client::Client, is_verbose_indicated: bool) {
             let get_raw_transaction_command_response_result = GetRawTransactionCommand::new(
-                first_arg.to_string(),
+                transaction_hash.to_string(),
             )
             .verbose(true)
             .call(&bitcoind_request_client);
@@ -580,6 +565,32 @@ fn main() {
             };
             // Don't hardcode blocktime
             print_transaction(&transaction, &bitcoind_request_client, is_verbose_indicated)
+    }
+    match maybe_block_hash {
+        Some(block_hash) => {
+            let maybe_get_block_command_response =
+                GetBlockCommand::new(Blockhash(block_hash.to_string()))
+                    .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation)
+                    .call(&bitcoind_request_client);
+            match maybe_get_block_command_response {
+                Ok(get_block_command_response) => {
+                    match get_block_command_response {
+                GetBlockCommandResponse::Block(block) => {
+                    print_block(block, bitcoin_node_query_client, bitcoind_request_client)
+                }
+                GetBlockCommandResponse::BlockHash(_hash) => {
+
+                    panic!("not supported")},
+                    }
+                },
+                Err(_err) => {
+
+            perform_for_transaction(first_arg.to_string(), bitcoind_request_client, is_verbose_indicated);
+                    },
+            }
+        }
+        None => {
+            perform_for_transaction(first_arg.to_string(), bitcoind_request_client, is_verbose_indicated)
         }
     }
 }
