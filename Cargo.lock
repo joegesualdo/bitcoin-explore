@@ -139,7 +139,7 @@ checksum = "211f2c651a0c694ee13269bece409646adb87a7de97cbf2a190822ee982a8487"
 
 [[package]]
 name = "bitcoin-explore"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "bitcoin-node-query",
  "bitcoind-request",
@@ -151,9 +151,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-node-query"
-version = "0.1.5"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e2aa54ccb71d8c4eb46c4403dc6e377dd9646aead217800a3239ea9542d096b"
+checksum = "4716107b1f305cce689f447ee6f7489fa9d016f6f7fc5856fba06e913e7a2f2e"
 dependencies = [
  "bitcoin-address",
  "bitcoin-transaction-utils",
@@ -631,9 +631,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.4.4"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66d72b759436ae32898a2af0a14218dbf55efde3feeb170eb623637db85ee1e0"
+checksum = "10c98bba371b9b22a71a9414e420f92ddeb2369239af08200816169d5e2dd7aa"
 dependencies = [
  "libc",
  "winapi",

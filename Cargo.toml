@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin-explore"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 description = "Bitcoin Blockchain Explorer in the Terminal"
 license = "MIT"
@@ -9,7 +9,7 @@ license = "MIT"
 
 [dependencies]
 bitcoind-request = "=0.1.12"
-bitcoin-node-query = "=0.1.5"
+bitcoin-node-query = "=0.1.7"
 sha256 = "=1.0.3"
 hex-utilities = "=0.1.2"
 chrono = "=0.4"
