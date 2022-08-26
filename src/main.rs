@@ -529,18 +529,24 @@ fn main() {
                 GetBlockHashCommand::new(height).call(&bitcoind_request_client);
             match maybe_get_block_hash_command_response {
                 Ok(get_block_hash_command_response) => {
+
                     Some(get_block_hash_command_response.0 .0.to_string())
                 }
-                Err(err) => None,
+                Err(err) => {
+                    None
+                },
             }
         }
-        Err(error) => None,
+        Err(error) => {
+            Some(first_arg.to_string())
+        },
     };
     // let get_block_command_response = GetBlockCommand::new(Blockhash(
     //     "00000000000000000008fc4136a664f78ac1a648a6c28ef1733dd07c88cbd0ae".to_string(),
     // ));
     match maybe_block_hash {
         Some(block_hash) => {
+                    print!("333333");
             let get_block_command_response =
                 GetBlockCommand::new(Blockhash(block_hash.to_string()))
                     .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation)
@@ -554,6 +560,7 @@ fn main() {
             }
         }
         None => {
+                    print!("444");
             let get_raw_transaction_command_response_result = GetRawTransactionCommand::new(
                 first_arg.to_string(),
             )
@@ -646,9 +653,6 @@ fn print_block(
         "{}",
         row_componenent("Transactions", &block.tx.len().to_string())
     );
-    println!("--------------------------------TRANSACTIONS---------------------------------------------------------");
-    // let sub_transactions = &block.tx[1..6];
-    // let transactions = sub_transactions
     let transactions = block.tx;
     // TODO: VERY Inefficient. We're looping over all the transactions twice, when we
     // should only be doing it once.
