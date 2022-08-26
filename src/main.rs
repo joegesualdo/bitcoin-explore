@@ -546,7 +546,6 @@ fn main() {
     // ));
     match maybe_block_hash {
         Some(block_hash) => {
-                    print!("333333");
             let get_block_command_response =
                 GetBlockCommand::new(Blockhash(block_hash.to_string()))
                     .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation)
