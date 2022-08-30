@@ -563,9 +563,6 @@ fn main() {
             Some(first_arg.to_string())
         },
     };
-    // let get_block_command_response = GetBlockCommand::new(Blockhash(
-    //     "00000000000000000008fc4136a664f78ac1a648a6c28ef1733dd07c88cbd0ae".to_string(),
-    // ));
     fn perform_for_transaction(transaction_hash: String, bitcoind_request_client: bitcoind_request::client::Client, is_verbose_indicated: bool) {
             let get_raw_transaction_command_response_result = GetRawTransactionCommand::new(
                 transaction_hash.to_string(),
@@ -715,8 +712,4 @@ fn print_block(
             todo!()
         }
     }
-    // print_transaction(&transaction, block.time, &bitcoind_request_client);
-    // for transaction in &transactions_not_including_coinbase[0..5] {
-    //     print_transaction_for_block(&transaction, block.time, &bitcoind_request_client);
-    // }
 }

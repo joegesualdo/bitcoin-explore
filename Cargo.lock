@@ -139,7 +139,7 @@ checksum = "211f2c651a0c694ee13269bece409646adb87a7de97cbf2a190822ee982a8487"
 
 [[package]]
 name = "bitcoin-explore"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "bitcoin-node-query",
  "bitcoind-request",
