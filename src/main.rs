@@ -13,7 +13,7 @@ use bitcoind_request::{
     },
     Blockhash,
 };
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     get_text_for_hex,
@@ -554,12 +554,12 @@ fn main() {
 
                     Some(get_block_hash_command_response.0 .0.to_string())
                 }
-                Err(err) => {
+                Err(_err) => {
                     None
                 },
             }
         }
-        Err(error) => {
+        Err(_error) => {
             Some(first_arg.to_string())
         },
     };
@@ -578,7 +578,7 @@ fn main() {
                         }
                     }
                 },
-                Err(error) => {
+                Err(_error) => {
                     todo!()
                 }
             };
@@ -689,7 +689,7 @@ fn print_block(
     let mut coinbase_transaction: Option<DecodeRawTransactionResponse> = None;
     for transaction in transactions {
         match transaction {
-            bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Id(id) => {
+            bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Id(_id) => {
                 todo!()
             }
             bitcoind_request::command::get_block::GetBlockCommandTransactionResponse::Raw(
