@@ -141,7 +141,7 @@ fn get_formatted_string_for_elapsed_seconds(seconds: i64) -> String {
     let hours_since_datetime = time_since_datetime.num_hours();
     let minutes_since_datetime = time_since_datetime.num_minutes();
     let seconds_since_datetime = time_since_datetime.num_seconds();
-    let duration_formatted = if days_since_datetime > 0 {
+    if days_since_datetime > 0 {
         format!("{} days", days_since_datetime)
     } else if hours_since_datetime > 0 {
         format!("{} hours", hours_since_datetime)
@@ -151,8 +151,7 @@ fn get_formatted_string_for_elapsed_seconds(seconds: i64) -> String {
         format!("{} seconds", seconds_since_datetime)
     } else {
         panic!("DURATION NOT FOUND")
-    };
-    duration_formatted
+    }
 }
 
 fn get_timestamp_formatted(unix_timestamp: i64) -> String {
@@ -170,18 +169,18 @@ fn get_op_returns_texts_for_asm(asm: String) -> Option<Vec<String>> {
         let splits: Vec<String> = asm.split_whitespace().map(String::from).collect();
         let maybe_first = splits.first();
         let is_first_op_return = match maybe_first {
-            Some(first) => first == &"OP_RETURN",
+            Some(first) => first == "OP_RETURN",
             None => false,
         };
         if is_first_op_return {
-            let rest: Vec<String> = splits[0..].into_iter().map(String::from).collect();
+            let rest: Vec<String> = splits[0..].iter().map(String::from).collect();
             Some(rest)
         } else {
             None
         }
     }
 
-    let maybe_op_return_hexes = op_return_hexs_for_asm(asm.to_string());
+    let maybe_op_return_hexes = op_return_hexs_for_asm(asm);
     match maybe_op_return_hexes {
         Some(op_return_hexes) => {
             let mut op_return_texts = vec![];
@@ -213,7 +212,7 @@ fn get_text_for_coinbase_sequence(hex: &String) -> Result<String, hex_utilities:
 fn prefix_string(s: &str, prefix: &str) -> String {
     format!("{}{}", prefix, s)
 }
-fn add_hex_prefix(s: &String) -> String {
+fn add_hex_prefix(s: &str) -> String {
     prefix_string(s, "0x")
 }
 
@@ -224,10 +223,10 @@ pub enum BlockVersion {
 }
 
 // Source: https://dlt-repo.net/how-to-calculate-a-bitcoin-block-hash-manually/
-pub fn get_block_hash_from_block_header_hex(block_header_hex: &String) -> String {
+pub fn get_block_hash_from_block_header_hex(block_header_hex: &str) -> String {
     // To calculate the block hash:
     // convert block header hex into byte array
-    let decoded = decode_hex(&block_header_hex).unwrap();
+    let decoded = decode_hex(block_header_hex).unwrap();
     // SHA256 hash the byte array
     let a = digest_bytes(&decoded);
     // convert the result of the 256 hash into a byte array
@@ -235,8 +234,7 @@ pub fn get_block_hash_from_block_header_hex(block_header_hex: &String) -> String
     // SH256 hash the byte array
     let b = digest_bytes(&decoded_a);
     // convert the result of the second SHA25 hash into little endian.
-    let block_hash = convert_big_endian_hex_to_little_endian(&b);
-    block_hash
+    convert_big_endian_hex_to_little_endian(&b)
 }
 
 // Source: https://dlt-repo.net/how-to-calculate-a-bitcoin-block-hash-manually/
@@ -280,7 +278,7 @@ fn print_transaction(
     bitcoind_request_client: &bitcoind_request::client::Client,
     should_show_vout_detils_of_vin: bool,
 ) {
-    println!("");
+    println!();
     if transaction.is_coinbase_transaction() {
         println!("====== ✨ COINBASE TRANSACTION ✨ ============================================");
     } else {
